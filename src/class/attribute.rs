@@ -66,6 +66,8 @@ pub struct LineNumber {
 pub struct CodeAttribute {
     pub max_stack: usize,
     pub max_locals: usize,
+    pub bytecode_to_op: Vec<usize>,
+    pub op_to_bytecode: Vec<usize>,
     pub code: Vec<OpCode>,
     pub code_raw: Vec<u8>,
     pub exception_table: Vec<Exception>,
@@ -105,8 +107,14 @@ impl AttributeInfo {
                 }
 
                 let mut code_stream = ByteStream::from(code_raw.clone());
+                let mut bytecode_to_op = vec![0; code_raw.len()];
                 let mut code = Vec::new();
+                let mut op_to_bytecode = Vec::new();
+                let mut start = 0;
                 while let Some(op) = OpCode::parse(&mut code_stream) {
+                    bytecode_to_op[start] = code.len();
+                    op_to_bytecode.push(start);
+                    start = code_stream.i;
                     code.push(op);
                 }
 
@@ -131,6 +139,8 @@ impl AttributeInfo {
                     max_locals,
                     code,
                     code_raw,
+                    bytecode_to_op,
+                    op_to_bytecode,
                     exception_table,
                     attributes,
                 })

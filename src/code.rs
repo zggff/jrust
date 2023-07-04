@@ -126,22 +126,22 @@ impl OpCode {
             0xbb => OpCode::New(c.next_u2()?),
 
             // 0x99 => OpCode::IfEq(c.next_u1()? as usize, c.next_u1()? as usize),
-            0x99 => OpCode::IfEq((c.next_u2()? - 3) as i16 as isize),
-            0x9a => OpCode::IfNe((c.next_u2()? - 3) as i16 as isize),
-            0x9b => OpCode::IfLt((c.next_u2()? - 3) as i16 as isize),
-            0x9c => OpCode::IfGe((c.next_u2()? - 3) as i16 as isize),
-            0x9d => OpCode::IfGt((c.next_u2()? - 3) as i16 as isize),
-            0x9e => OpCode::IfLe((c.next_u2()? - 3) as i16 as isize),
+            0x99 => OpCode::IfEq((c.next_u2()?) as i16 as isize),
+            0x9a => OpCode::IfNe((c.next_u2()?) as i16 as isize),
+            0x9b => OpCode::IfLt((c.next_u2()?) as i16 as isize),
+            0x9c => OpCode::IfGe((c.next_u2()?) as i16 as isize),
+            0x9d => OpCode::IfGt((c.next_u2()?) as i16 as isize),
+            0x9e => OpCode::IfLe((c.next_u2()?) as i16 as isize),
 
 
-            0x9f => OpCode::IfICmpEq((c.next_u2()? - 3) as i16 as isize),
-            0xa0 => OpCode::IfICmpNe((c.next_u2()? - 3) as i16 as isize),
-            0xa1 => OpCode::IfICmpLt((c.next_u2()? - 3) as i16 as isize),
-            0xa2 => OpCode::IfICmpGe((c.next_u2()? - 3) as i16 as isize),
-            0xa3 => OpCode::IfICmpGt((c.next_u2()? - 3) as i16 as isize),
-            0xa4 => OpCode::IfICmpLe((c.next_u2()? - 3) as i16 as isize),
+            0x9f => OpCode::IfICmpEq((c.next_u2()?) as i16 as isize),
+            0xa0 => OpCode::IfICmpNe((c.next_u2()?) as i16 as isize),
+            0xa1 => OpCode::IfICmpLt((c.next_u2()?) as i16 as isize),
+            0xa2 => OpCode::IfICmpGe((c.next_u2()?) as i16 as isize),
+            0xa3 => OpCode::IfICmpGt((c.next_u2()?) as i16 as isize),
+            0xa4 => OpCode::IfICmpLe((c.next_u2()?) as i16 as isize),
 
-            0xa7 => OpCode::Goto((c.next_u2()? - 3) as i16 as isize),
+            0xa7 => OpCode::Goto((c.next_u2()?) as i16 as isize),
 
             op => todo!("opcode not implemented: 0x{op:0X}"),
         };

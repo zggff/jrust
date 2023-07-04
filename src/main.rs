@@ -101,8 +101,9 @@ fn exec(
     s0: &mut Vec<isize>,
     mut s: Vec<isize>,
 ) -> anyhow::Result<()> {
-    let mut code = code.code_raw.clone().into();
-    while let Some(op) = OpCode::parse(&mut code) {
+    let mut i = 0;
+    loop {
+        let op = &code.code[i];
         match op {
             OpCode::GetStatic(_index) => {
                 // here we initialize class or interface
@@ -116,10 +117,10 @@ fn exec(
             OpCode::IConst4 => s.push(4),
             OpCode::IConst5 => s.push(5),
 
-            OpCode::BiPush(val) => s.push(val as i8 as isize),
-            OpCode::SiPush(val) => s.push(val as i16 as isize),
+            &OpCode::BiPush(val) => s.push(val as i8 as isize),
+            &OpCode::SiPush(val) => s.push(val as i16 as isize),
 
-            OpCode::InvokeVirtual(index) => {
+            &OpCode::InvokeVirtual(index) => {
                 let methodref = c.cp.get_methodref(index).unwrap();
                 let class = c.cp.get_class(methodref.class_index).unwrap();
                 let _class_name = &c.cp.get_utf(class.name_index).unwrap().bytes;
@@ -142,7 +143,7 @@ fn exec(
                     (n, t) => todo!("not implemented {n} {t}"),
                 }
             }
-            OpCode::InvokeStatic(index) => {
+            &OpCode::InvokeStatic(index) => {
                 let methodref = c.cp.get_methodref(index).unwrap();
                 let class = c.cp.get_class(methodref.class_index).unwrap();
                 let _class_name = c.cp.get_utf(class.name_index).unwrap().bytes.as_str();
@@ -188,43 +189,51 @@ fn exec(
 
             OpCode::IfEq(offset) => {
                 if s.pop().unwrap() == 0 {
-                    code.advance_by(offset).unwrap();
+                    i = code.bytecode_to_op[(code.op_to_bytecode[i] as isize + offset) as usize];
+                    continue;
                 }
             }
             OpCode::IfNe(offset) => {
                 if s.pop().unwrap() != 0 {
-                    code.advance_by(offset).unwrap();
+                    i = code.bytecode_to_op[(code.op_to_bytecode[i] as isize + offset) as usize];
+                    continue;
                 }
             }
             OpCode::IfLt(offset) => {
                 if s.pop().unwrap() < 0 {
-                    code.advance_by(offset).unwrap();
+                    i = code.bytecode_to_op[(code.op_to_bytecode[i] as isize + offset) as usize];
+                    continue;
                 }
             }
             OpCode::IfGe(offset) => {
                 if s.pop().unwrap() >= 0 {
-                    code.advance_by(offset).unwrap();
+                    i = code.bytecode_to_op[(code.op_to_bytecode[i] as isize + offset) as usize];
+                    continue;
                 }
             }
             OpCode::IfGt(offset) => {
                 if s.pop().unwrap() > 0 {
-                    code.advance_by(offset).unwrap();
+                    i = code.bytecode_to_op[(code.op_to_bytecode[i] as isize + offset) as usize];
+                    continue;
                 }
             }
             OpCode::IfLe(offset) => {
                 if s.pop().unwrap() <= 0 {
-                    code.advance_by(offset).unwrap();
+                    i = code.bytecode_to_op[(code.op_to_bytecode[i] as isize + offset) as usize];
+                    continue;
                 }
             }
             OpCode::IfICmpEq(offset) => {
                 if s.pop().unwrap() == s.pop().unwrap() {
-                    code.advance_by(offset).unwrap();
+                    i = code.bytecode_to_op[(code.op_to_bytecode[i] as isize + offset) as usize];
+                    continue;
                 }
             }
 
             OpCode::IfICmpNe(offset) => {
                 if s.pop().unwrap() != s.pop().unwrap() {
-                    code.advance_by(offset).unwrap();
+                    i = code.bytecode_to_op[(code.op_to_bytecode[i] as isize + offset) as usize];
+                    continue;
                 }
             }
 
@@ -232,33 +241,38 @@ fn exec(
                 let a = s.pop().unwrap();
                 let b = s.pop().unwrap();
                 if b < a {
-                    code.advance_by(offset).unwrap();
+                    i = code.bytecode_to_op[(code.op_to_bytecode[i] as isize + offset) as usize];
+                    continue;
                 }
             }
             OpCode::IfICmpGe(offset) => {
                 let a = s.pop().unwrap();
                 let b = s.pop().unwrap();
                 if b >= a {
-                    code.advance_by(offset).unwrap();
+                    i = code.bytecode_to_op[(code.op_to_bytecode[i] as isize + offset) as usize];
+                    continue;
                 }
             }
             OpCode::IfICmpGt(offset) => {
                 let a = s.pop().unwrap();
                 let b = s.pop().unwrap();
                 if b > a {
-                    code.advance_by(offset).unwrap();
+                    i = code.bytecode_to_op[(code.op_to_bytecode[i] as isize + offset) as usize];
+                    continue;
                 }
             }
             OpCode::IfICmpLe(offset) => {
                 let a = s.pop().unwrap();
                 let b = s.pop().unwrap();
                 if b <= a {
-                    code.advance_by(offset).unwrap();
+                    i = code.bytecode_to_op[(code.op_to_bytecode[i] as isize + offset) as usize];
+                    continue;
                 }
             }
 
             OpCode::Goto(offset) => {
-                code.advance_by(offset).unwrap();
+                i = code.bytecode_to_op[(code.op_to_bytecode[i] as isize + offset) as usize];
+                continue;
             }
 
             OpCode::IAdd => {
@@ -279,9 +293,9 @@ fn exec(
                 s.push(a * b);
             }
 
-            OpCode::Iinc(index, incr) => l[index] += incr,
+            &OpCode::Iinc(index, incr) => l[index] += incr,
 
-            OpCode::Ldc(index) => match c.cp.get(index).unwrap() {
+            &OpCode::Ldc(index) => match c.cp.get(index).unwrap() {
                 &CpInfo::Integer(IntegerInfo { val }) => s.push(val as i32 as isize),
                 &CpInfo::String(StringInfo { string_index }) => s.push(string_index as isize),
 
@@ -295,6 +309,7 @@ fn exec(
 
             op => todo!("opcode not implemented: {op:?}"),
         }
+        i += 1;
     }
     Ok(())
 }
