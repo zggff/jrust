@@ -279,6 +279,8 @@ fn exec(
                 s.push(a * b);
             }
 
+            OpCode::Iinc(index, incr) => l[index] += incr,
+
             OpCode::Ldc(index) => match c.cp.get(index).unwrap() {
                 &CpInfo::Integer(IntegerInfo { val }) => s.push(val as i32 as isize),
                 &CpInfo::String(StringInfo { string_index }) => s.push(string_index as isize),

@@ -160,9 +160,7 @@ impl AttributeInfo {
                 for _ in 0..number_of_entries {
                     entries.push(StackMapFrame::parse(f, cp)?);
                 }
-                Attribute::StackMapTable(StackMapTableAttribute {
-                    entries,
-                })
+                Attribute::StackMapTable(StackMapTableAttribute { entries })
             }
             name => todo!("parsing attribute: {name}"),
         };
@@ -182,19 +180,79 @@ pub enum StackMapFrame {
     },
     SameLocals1StackItemFrame,
     SameLocals1StackItemFrameExtended,
-    ChopFrame,
+    ChopFrame {
+        frame_type: usize,
+        offset_delta: usize,
+    },
     SameFrameExtended,
-    AppendFrame,
+    AppendFrame {
+        frame_type: usize,
+        offset_delta: usize,
+        locals: Vec<VerificationTypeInfo>,
+    },
     FullFrame,
 }
 
 impl StackMapFrame {
     pub fn parse(f: &mut ByteStream, _cp: &CpPool) -> Option<Self> {
         let frame_type = f.next_u1()? as usize;
-        if frame_type <= 63 {
-            return Some(StackMapFrame::SameFrame { frame_type });
+        match frame_type {
+            0..=63 => Some(StackMapFrame::SameFrame { frame_type }),
+            248..=250 => {
+                let offset_delta = f.next_u2()?;
+                Some(StackMapFrame::ChopFrame {
+                    frame_type,
+                    offset_delta,
+                })
+            }
+            252..=254 => {
+                let offset_delta = f.next_u2()?;
+                let capacity = frame_type - 251;
+                let mut locals = Vec::with_capacity(capacity);
+                for _ in 0..capacity {
+                    locals.push(VerificationTypeInfo::parse(f)?)
+                }
+                Some(StackMapFrame::AppendFrame {
+                    frame_type,
+                    offset_delta,
+                    locals,
+                })
+            }
+            a => {
+                todo!("stack frame not implemented: {a}");
+            }
         }
-        todo!("stack frame not implemented: {frame_type}");
     }
 }
 
+#[derive(Debug, Clone)]
+pub enum VerificationTypeInfo {
+    Top,
+    Integer,
+    Float,
+    Long,
+    Double,
+    Null,
+    UninitializedThis,
+    Object(usize),
+    Uninitialized(usize),
+}
+
+impl VerificationTypeInfo {
+    pub fn parse(f: &mut ByteStream) -> Option<Self> {
+        let tag = f.next_u1()?;
+        let res = match tag {
+            0 => Self::Top,
+            1 => Self::Integer,
+            2 => Self::Float,
+            3 => Self::Double,
+            4 => Self::Long,
+            5 => Self::Null,
+            6 => Self::UninitializedThis,
+            7 => Self::Object(f.next_u2()?),
+            8 => Self::Uninitialized(f.next_u2()?),
+            _ => unreachable!(),
+        };
+        Some(res)
+    }
+}

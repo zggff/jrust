@@ -11,8 +11,8 @@ pub enum OpCode {
     IConst4 = 0x7,  // push 4 onto stack
     IConst5 = 0x8,  // push 5 onto stack
 
-    BiPush(usize) = 0x10, // push byte
-    SiPush(usize) = 0x11, // push short
+    BiPush(isize) = 0x10, // push byte
+    SiPush(isize) = 0x11, // push short
     Ldc(usize) = 0x12, // push constant pool index onto stack
 
     ILoad0 = 0x1a, // load int from local
@@ -42,6 +42,8 @@ pub enum OpCode {
     IAdd = 0x60,
     ISub = 0x64,
     IMul = 0x68,
+
+    Iinc(usize, isize) = 0x84,
      
     IReturn = 0xac,
 
@@ -52,20 +54,20 @@ pub enum OpCode {
     InvokeStatic(usize) = 0xb8,
     New(usize) = 0xbb, // create new object
 
-    IfEq(usize) = 0x99,
-    IfNe(usize) = 0x9a,
-    IfLt(usize) = 0x9b,
-    IfGe(usize) = 0x9c,
-    IfGt(usize) = 0x9d,
-    IfLe(usize) = 0x9e,
-    IfICmpEq(usize) = 0x9f,
-    IfICmpNe(usize) = 0xa0,
-    IfICmpLt(usize) = 0xa1,
-    IfICmpGe(usize) = 0xa2,
-    IfICmpGt(usize) = 0xa3,
-    IfICmpLe(usize) = 0xa4,
+    IfEq(isize) = 0x99,
+    IfNe(isize) = 0x9a,
+    IfLt(isize) = 0x9b,
+    IfGe(isize) = 0x9c,
+    IfGt(isize) = 0x9d,
+    IfLe(isize) = 0x9e,
+    IfICmpEq(isize) = 0x9f,
+    IfICmpNe(isize) = 0xa0,
+    IfICmpLt(isize) = 0xa1,
+    IfICmpGe(isize) = 0xa2,
+    IfICmpGt(isize) = 0xa3,
+    IfICmpLe(isize) = 0xa4,
 
-    Goto(usize) = 0xa7
+    Goto(isize) = 0xa7
 
 }
 
@@ -80,8 +82,8 @@ impl OpCode {
             0x7 => OpCode::IConst4,
             0x8 => OpCode::IConst5,
 
-            0x10 => OpCode::BiPush(c.next_u1()? as usize),
-            0x11 => OpCode::SiPush(c.next_u2()?),
+            0x10 => OpCode::BiPush(c.next_u1()? as i8 as isize),
+            0x11 => OpCode::SiPush(c.next_u2()? as i16 as isize),
             0x12 => OpCode::Ldc(c.next_u1()? as usize),
 
             0x1a => OpCode::ILoad0,
@@ -111,6 +113,8 @@ impl OpCode {
             0x64 => OpCode::ISub,
             0x68 => OpCode::IMul,
 
+            0x84 => OpCode::Iinc(c.next_u1()? as usize, c.next_u1()? as i8 as isize),
+
             0xac => OpCode::IReturn,
 
 
@@ -122,22 +126,22 @@ impl OpCode {
             0xbb => OpCode::New(c.next_u2()?),
 
             // 0x99 => OpCode::IfEq(c.next_u1()? as usize, c.next_u1()? as usize),
-            0x99 => OpCode::IfEq(c.next_u2()? - 3),
-            0x9a => OpCode::IfNe(c.next_u2()? - 3),
-            0x9b => OpCode::IfLt(c.next_u2()? - 3),
-            0x9c => OpCode::IfGe(c.next_u2()? - 3),
-            0x9d => OpCode::IfGt(c.next_u2()? - 3),
-            0x9e => OpCode::IfLe(c.next_u2()? - 3),
+            0x99 => OpCode::IfEq((c.next_u2()? - 3) as i16 as isize),
+            0x9a => OpCode::IfNe((c.next_u2()? - 3) as i16 as isize),
+            0x9b => OpCode::IfLt((c.next_u2()? - 3) as i16 as isize),
+            0x9c => OpCode::IfGe((c.next_u2()? - 3) as i16 as isize),
+            0x9d => OpCode::IfGt((c.next_u2()? - 3) as i16 as isize),
+            0x9e => OpCode::IfLe((c.next_u2()? - 3) as i16 as isize),
 
 
-            0x9f => OpCode::IfICmpEq(c.next_u2()? - 3),
-            0xa0 => OpCode::IfICmpNe(c.next_u2()? - 3),
-            0xa1 => OpCode::IfICmpLt(c.next_u2()? - 3),
-            0xa2 => OpCode::IfICmpGe(c.next_u2()? - 3),
-            0xa3 => OpCode::IfICmpGt(c.next_u2()? - 3),
-            0xa4 => OpCode::IfICmpLe(c.next_u2()? - 3),
+            0x9f => OpCode::IfICmpEq((c.next_u2()? - 3) as i16 as isize),
+            0xa0 => OpCode::IfICmpNe((c.next_u2()? - 3) as i16 as isize),
+            0xa1 => OpCode::IfICmpLt((c.next_u2()? - 3) as i16 as isize),
+            0xa2 => OpCode::IfICmpGe((c.next_u2()? - 3) as i16 as isize),
+            0xa3 => OpCode::IfICmpGt((c.next_u2()? - 3) as i16 as isize),
+            0xa4 => OpCode::IfICmpLe((c.next_u2()? - 3) as i16 as isize),
 
-            0xa7 => OpCode::Goto(c.next_u2()? - 3),
+            0xa7 => OpCode::Goto((c.next_u2()? - 3) as i16 as isize),
 
             op => todo!("opcode not implemented: 0x{op:0X}"),
         };

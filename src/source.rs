@@ -1,27 +1,36 @@
-use std::ops::{Deref, DerefMut};
-
-pub struct ByteStream(Box<dyn Iterator<Item = u8>>);
-
-impl Deref for ByteStream {
-    type Target = Box<dyn Iterator<Item = u8>>;
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl DerefMut for ByteStream {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
-    }
+pub struct ByteStream{
+    pub v: Vec<u8>,
+    pub i: usize
 }
 
 impl From<Vec<u8>> for ByteStream {
     fn from(value: Vec<u8>) -> Self {
-        ByteStream(Box::new(value.into_iter()))
+        ByteStream { v: value, i: 0 }
+        // ByteStream(Box::new(value.into_iter()))
     }
 }
 
 impl ByteStream {
+    pub fn next(&mut self) -> Option<u8> {
+        if self.i < self.v.len() {
+            let i = self.i;
+            self.i += 1;
+            Some(self.v[i])
+        } else {
+            None
+        }
+    }
+    pub fn advance_by(&mut self, offset: isize) -> Option<()> {
+        if offset < 0 && (self.i as isize) < offset {
+            return None
+        }
+        self.i = (self.i as isize + offset) as usize;
+        if self.i < self.v.len() {
+            Some(())
+        } else {
+            None
+        }
+    }
     pub fn next_u1(&mut self) -> Option<u8> {
         self.next()
     }
