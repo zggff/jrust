@@ -39,6 +39,7 @@ pub enum OpCode {
 
     Dup = 0x59, // duplicate top of stack
 
+    IAdd = 0x60,
     ISub = 0x64,
     IMul = 0x68,
      
@@ -51,12 +52,21 @@ pub enum OpCode {
     InvokeStatic(usize) = 0xb8,
     New(usize) = 0xbb, // create new object
 
-    IfEq(usize, usize) = 0x99,
-    IfNe(usize, usize) = 0x9a,
-    IfLt(usize, usize) = 0x9b,
-    IfGe(usize, usize) = 0x9c,
-    IfGt(usize, usize) = 0x9d,
-    IfLe(usize, usize) = 0x9e,
+    IfEq(usize) = 0x99,
+    IfNe(usize) = 0x9a,
+    IfLt(usize) = 0x9b,
+    IfGe(usize) = 0x9c,
+    IfGt(usize) = 0x9d,
+    IfLe(usize) = 0x9e,
+    IfICmpEq(usize) = 0x9f,
+    IfICmpNe(usize) = 0xa0,
+    IfICmpLt(usize) = 0xa1,
+    IfICmpGe(usize) = 0xa2,
+    IfICmpGt(usize) = 0xa3,
+    IfICmpLe(usize) = 0xa4,
+
+    Goto(usize) = 0xa7
+
 }
 
 impl OpCode {
@@ -97,6 +107,7 @@ impl OpCode {
 
             0x59 => OpCode::Dup,
 
+            0x60 => OpCode::IAdd,
             0x64 => OpCode::ISub,
             0x68 => OpCode::IMul,
 
@@ -111,7 +122,22 @@ impl OpCode {
             0xbb => OpCode::New(c.next_u2()?),
 
             // 0x99 => OpCode::IfEq(c.next_u1()? as usize, c.next_u1()? as usize),
-            0x9A => OpCode::IfNe(c.next_u1()? as usize, c.next_u1()? as usize),
+            0x99 => OpCode::IfEq(c.next_u2()? - 3),
+            0x9a => OpCode::IfNe(c.next_u2()? - 3),
+            0x9b => OpCode::IfLt(c.next_u2()? - 3),
+            0x9c => OpCode::IfGe(c.next_u2()? - 3),
+            0x9d => OpCode::IfGt(c.next_u2()? - 3),
+            0x9e => OpCode::IfLe(c.next_u2()? - 3),
+
+
+            0x9f => OpCode::IfICmpEq(c.next_u2()? - 3),
+            0xa0 => OpCode::IfICmpNe(c.next_u2()? - 3),
+            0xa1 => OpCode::IfICmpLt(c.next_u2()? - 3),
+            0xa2 => OpCode::IfICmpGe(c.next_u2()? - 3),
+            0xa3 => OpCode::IfICmpGt(c.next_u2()? - 3),
+            0xa4 => OpCode::IfICmpLe(c.next_u2()? - 3),
+
+            0xa7 => OpCode::Goto(c.next_u2()? - 3),
 
             op => todo!("opcode not implemented: 0x{op:0X}"),
         };

@@ -1,15 +1,17 @@
+#![feature(iter_advance_by)]
 #![allow(dead_code)]
+
 use class::attribute::CodeAttribute;
 use code::OpCode;
 use source::ByteStream;
-use std::{collections::HashMap, fs::File, io::Read, env, process::exit};
+use std::{collections::HashMap, env, fs::File, io::Read, process::exit};
 
 use anyhow::Context;
 
 use crate::class::{
     attribute::Attribute,
     constant_pool::{CpInfo, IntegerInfo, StringInfo},
-    Class, 
+    Class,
 };
 
 macro_rules! cast {
@@ -86,7 +88,7 @@ fn main() -> anyhow::Result<()> {
         .context("no main function found")?;
     let locals = vec![0; entry.max_locals];
     let stack = Vec::with_capacity(entry.max_stack);
-    exec(&class, &functions, entry, locals, stack)?;
+    exec(&class, &functions, entry, locals, &mut vec![], stack)?;
 
     Ok(())
 }
@@ -96,11 +98,11 @@ fn exec(
     f: &HashMap<(String, String), &CodeAttribute>,
     code: &CodeAttribute,
     mut l: Vec<isize>,
+    s0: &mut Vec<isize>,
     mut s: Vec<isize>,
 ) -> anyhow::Result<()> {
     let mut code = code.code_raw.clone().into();
     while let Some(op) = OpCode::parse(&mut code) {
-        // for op in code {
         match op {
             OpCode::GetStatic(_index) => {
                 // here we initialize class or interface
@@ -162,26 +164,120 @@ fn exec(
                     locals.push(s.pop().unwrap());
                 }
                 let stack = Vec::with_capacity(func.max_stack);
-                exec(c, f, func, locals, stack).unwrap();
+                exec(c, f, func, locals, &mut s, stack).unwrap();
             }
 
             OpCode::ILoad0 => s.push(l[0]),
             OpCode::ILoad1 => s.push(l[1]),
             OpCode::ILoad2 => s.push(l[2]),
             OpCode::ILoad3 => s.push(l[3]),
+
             OpCode::ALoad0 => s.push(l[0]),
             OpCode::ALoad1 => s.push(l[1]),
             OpCode::ALoad2 => s.push(l[2]),
             OpCode::ALoad3 => s.push(l[3]),
 
             OpCode::IStore0 => l[0] = s.pop().unwrap(),
-            OpCode::IStore1 => l[0] = s.pop().unwrap(),
-            OpCode::IStore2 => l[0] = s.pop().unwrap(),
-            OpCode::IStore3 => l[0] = s.pop().unwrap(),
+            OpCode::IStore1 => l[1] = s.pop().unwrap(),
+            OpCode::IStore2 => l[2] = s.pop().unwrap(),
+            OpCode::IStore3 => l[3] = s.pop().unwrap(),
             OpCode::AStore0 => l[0] = s.pop().unwrap(),
-            OpCode::AStore1 => l[0] = s.pop().unwrap(),
-            OpCode::AStore2 => l[0] = s.pop().unwrap(),
-            OpCode::AStore3 => l[0] = s.pop().unwrap(),
+            OpCode::AStore1 => l[1] = s.pop().unwrap(),
+            OpCode::AStore2 => l[2] = s.pop().unwrap(),
+            OpCode::AStore3 => l[3] = s.pop().unwrap(),
+
+            OpCode::IfEq(offset) => {
+                if s.pop().unwrap() == 0 {
+                    code.advance_by(offset).unwrap();
+                }
+            }
+            OpCode::IfNe(offset) => {
+                if s.pop().unwrap() != 0 {
+                    code.advance_by(offset).unwrap();
+                }
+            }
+            OpCode::IfLt(offset) => {
+                if s.pop().unwrap() < 0 {
+                    code.advance_by(offset).unwrap();
+                }
+            }
+            OpCode::IfGe(offset) => {
+                if s.pop().unwrap() >= 0 {
+                    code.advance_by(offset).unwrap();
+                }
+            }
+            OpCode::IfGt(offset) => {
+                if s.pop().unwrap() > 0 {
+                    code.advance_by(offset).unwrap();
+                }
+            }
+            OpCode::IfLe(offset) => {
+                if s.pop().unwrap() <= 0 {
+                    code.advance_by(offset).unwrap();
+                }
+            }
+            OpCode::IfICmpEq(offset) => {
+                if s.pop().unwrap() == s.pop().unwrap() {
+                    code.advance_by(offset).unwrap();
+                }
+            }
+
+            OpCode::IfICmpNe(offset) => {
+                if s.pop().unwrap() != s.pop().unwrap() {
+                    code.advance_by(offset).unwrap();
+                }
+            }
+
+            OpCode::IfICmpLt(offset) => {
+                let a = s.pop().unwrap();
+                let b = s.pop().unwrap();
+                if b < a {
+                    code.advance_by(offset).unwrap();
+                }
+            }
+            OpCode::IfICmpGe(offset) => {
+                let a = s.pop().unwrap();
+                let b = s.pop().unwrap();
+                if b >= a {
+                    code.advance_by(offset).unwrap();
+                }
+            }
+            OpCode::IfICmpGt(offset) => {
+                let a = s.pop().unwrap();
+                let b = s.pop().unwrap();
+                if b > a {
+                    code.advance_by(offset).unwrap();
+                }
+            }
+            OpCode::IfICmpLe(offset) => {
+                let a = s.pop().unwrap();
+                let b = s.pop().unwrap();
+                if b <= a {
+                    code.advance_by(offset).unwrap();
+                }
+            }
+
+            OpCode::Goto(offset) => {
+                code.advance_by(offset).unwrap();
+            }
+
+            OpCode::IAdd => {
+                let a = s.pop().unwrap();
+                let b = s.pop().unwrap();
+                s.push(a + b);
+            }
+
+            OpCode::ISub => {
+                let a = s.pop().unwrap();
+                let b = s.pop().unwrap();
+                s.push(b - a);
+            }
+
+            OpCode::IMul => {
+                let a = s.pop().unwrap();
+                let b = s.pop().unwrap();
+                s.push(a * b);
+            }
 
             OpCode::Ldc(index) => match c.cp.get(index).unwrap() {
                 &CpInfo::Integer(IntegerInfo { val }) => s.push(val as i32 as isize),
@@ -189,9 +285,12 @@ fn exec(
 
                 a => todo!("not implemented {:?}", a),
             },
-            OpCode::Return => {
+            OpCode::IReturn => {
+                s0.push(s.pop().unwrap());
                 break;
             }
+            OpCode::Return => break,
+
             op => todo!("opcode not implemented: {op:?}"),
         }
     }

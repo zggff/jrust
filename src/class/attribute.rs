@@ -8,7 +8,7 @@ pub enum Attribute {
     // critical for correct interpretation
     ConstantValue,
     Code(CodeAttribute),
-    StackMapTable,
+    StackMapTable(StackMapTableAttribute),
     BootstrapMethods,
     NestHost,
     NestMembers,
@@ -38,6 +38,11 @@ pub enum Attribute {
     Module,
     ModulePackages,
     ModuleMainClass,
+}
+
+#[derive(Debug, Clone)]
+pub struct StackMapTableAttribute {
+    pub entries: Vec<StackMapFrame>,
 }
 
 #[derive(Debug, Clone)]
@@ -149,6 +154,16 @@ impl AttributeInfo {
                     sourcefile,
                 })
             }
+            "StackMapTable" => {
+                let number_of_entries = f.next_u2()?;
+                let mut entries = Vec::with_capacity(number_of_entries);
+                for _ in 0..number_of_entries {
+                    entries.push(StackMapFrame::parse(f, cp)?);
+                }
+                Attribute::StackMapTable(StackMapTableAttribute {
+                    entries,
+                })
+            }
             name => todo!("parsing attribute: {name}"),
         };
 
@@ -159,3 +174,27 @@ impl AttributeInfo {
         })
     }
 }
+
+#[derive(Debug, Clone)]
+pub enum StackMapFrame {
+    SameFrame {
+        frame_type: usize,
+    },
+    SameLocals1StackItemFrame,
+    SameLocals1StackItemFrameExtended,
+    ChopFrame,
+    SameFrameExtended,
+    AppendFrame,
+    FullFrame,
+}
+
+impl StackMapFrame {
+    pub fn parse(f: &mut ByteStream, _cp: &CpPool) -> Option<Self> {
+        let frame_type = f.next_u1()? as usize;
+        if frame_type <= 63 {
+            return Some(StackMapFrame::SameFrame { frame_type });
+        }
+        todo!("stack frame not implemented: {frame_type}");
+    }
+}
+
