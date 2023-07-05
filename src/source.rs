@@ -10,8 +10,9 @@ impl From<Vec<u8>> for ByteStream {
     }
 }
 
-impl ByteStream {
-    pub fn next(&mut self) -> Option<u8> {
+impl Iterator for ByteStream {
+    type Item = u8;
+    fn next(&mut self) -> Option<Self::Item> {
         if self.i < self.v.len() {
             let i = self.i;
             self.i += 1;
@@ -19,7 +20,12 @@ impl ByteStream {
         } else {
             None
         }
+        
     }
+     
+}
+
+impl ByteStream {
     pub fn advance_by(&mut self, offset: isize) -> Option<()> {
         if offset < 0 && (self.i as isize) < offset {
             return None
